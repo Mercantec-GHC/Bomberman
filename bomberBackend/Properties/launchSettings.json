@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "bomberBackend": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

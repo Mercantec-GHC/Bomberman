@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bomberman Game</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <h1>Bomberman Game</h1>
+    <button id="createGameButton">Create Game</button>
+    <p>Game ID: <span id="gameId">N/A</span></p>
+    <p>Player Count: <span id="playerCount">0</span></p>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const playerCountElement = document.getElementById("playerCount");
+      const gameIdElement = document.getElementById("gameId");
+      const createGameButton = document.getElementById("createGameButton");
+      const socket = new WebSocket("ws://localhost:8090");
+
+      const TILE_SIZE = 40;
+      const GRID_WIDTH = 20;
+      const GRID_HEIGHT = 15;
+
+      let players = [];
+      let gameState = {
+        grid: Array(GRID_HEIGHT)
+          .fill()
+          .map(() => Array(GRID_WIDTH).fill(0)),
+      };
+
+      // Tile types
+      const EMPTY = 0;
+      const WALL = 1;
+      const BREAKABLE = 2;
+
+      function initializeGrid() {
+        // Add walls
+        for (let y = 0; y < GRID_HEIGHT; y++) {
+          for (let x = 0; x < GRID_WIDTH; x++) {
+            if (
+              x === 0 ||
+              y === 0 ||
+              x === GRID_WIDTH - 1 ||
+              y === GRID_HEIGHT - 1 ||
+              (x % 2 === 0 && y % 2 === 0)
+            ) {
+              gameState.grid[y][x] = WALL;
+            } else if (Math.random() < 0.3) {
+              gameState.grid[y][x] = BREAKABLE;
+            }
+          }
+        }
+        // Ensure starting positions are clear
+        gameState.grid[1][1] = EMPTY;
+        gameState.grid[1][2] = EMPTY;
+        gameState.grid[2][1] = EMPTY;
+        gameState.grid[GRID_HEIGHT - 2][GRID_WIDTH - 2] = EMPTY;
+        gameState.grid[GRID_HEIGHT - 2][GRID_WIDTH - 3] = EMPTY;
+        gameState.grid[GRID_HEIGHT - 3][GRID_WIDTH - 2] = EMPTY;
+      }
+
+      function drawGame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw grid
+        for (let y = 0; y < GRID_HEIGHT; y++) {
+          for (let x = 0; x < GRID_WIDTH; x++) {
+            switch (gameState.grid[y][x]) {
+              case WALL:
+                ctx.fillStyle = "#333";
+                ctx.fillRect(
+                  x * TILE_SIZE,
+                  y * TILE_SIZE,
+                  TILE_SIZE,
+                  TILE_SIZE
+                );
+                break;
+              case BREAKABLE:
+                ctx.fillStyle = "#888";
+                ctx.fillRect(
+                  x * TILE_SIZE,
+                  y * TILE_SIZE,
+                  TILE_SIZE,
+                  TILE_SIZE
+                );
+                break;
+            }
+          }
+        }
+
+        // Draw players
+        players.forEach((player, index) => {
+          ctx.fillStyle = ["red", "blue", "green", "yellow"][index % 4];
+          ctx.fillRect(
+            player.X * TILE_SIZE,
+            player.Y * TILE_SIZE,
+            TILE_SIZE,
+            TILE_SIZE
+          );
+        });
+
+        playerCountElement.textContent = players.length;
+      }
+
+      socket.onopen = () => {
+        console.log("Connected to server");
+        initializeGrid();
+        drawGame();
+      };
+
+      socket.onmessage = (event) => {
+        console.log("Message received from server:", event.data);
+        const data = JSON.parse(event.data);
+        if (data.type === "gameCreated") {
+          gameIdElement.textContent = data.gameId;
+        } else if (data.Players) {
+          console.log("Updating players array:", data.Players);
+          players = data.Players;
+          drawGame();
+        }
+      };
+
+      createGameButton.addEventListener("click", () => {
+        socket.send(JSON.stringify({ type: "create" }));
+      });
+
+      console.log("Bomberman frontend loaded and ready");
+    </script>
+  </body>
+</html>

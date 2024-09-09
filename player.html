@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bomberman - Spiller 1 Kontroller</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f0f0;
+        font-family: Arial, sans-serif;
+      }
+      #controlContainer {
+        text-align: center;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .controlButton {
+        width: 80px;
+        height: 80px;
+        margin: 5px;
+        font-size: 24px;
+        border: none;
+        border-radius: 10px;
+        background-color: #4caf50;
+        color: white;
+        cursor: pointer;
+      }
+      .controlButton:active {
+        background-color: #45a049;
+      }
+      #bombButton {
+        width: 170px;
+        background-color: #f44336;
+      }
+      #bombButton:active {
+        background-color: #d32f2f;
+      }
+      #status {
+        margin-top: 20px;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controlContainer">
+      <h2>Spiller 1 Kontroller</h2>
+      <input type="text" id="gameIdInput" placeholder="Enter Game ID" />
+      <button id="joinGameButton">Join Game</button>
+      <div>
+        <button id="upButton" class="controlButton">↑</button>
+      </div>
+      <div>
+        <button id="leftButton" class="controlButton">←</button>
+        <button id="rightButton" class="controlButton">→</button>
+      </div>
+      <div>
+        <button id="downButton" class="controlButton">↓</button>
+      </div>
+      <div>
+        <button id="bombButton" class="controlButton">BOMBE</button>
+      </div>
+      <div id="status">Status: Ikke forbundet</div>
+    </div>
+
+    <script>
+      const socket = new WebSocket("ws://localhost:8090");
+      const statusElement = document.getElementById("status");
+      const gameIdInput = document.getElementById("gameIdInput");
+      const joinGameButton = document.getElementById("joinGameButton");
+
+      function sendMove(direction) {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "move", direction: direction }));
+        }
+      }
+
+      joinGameButton.addEventListener("click", () => {
+        const gameId = gameIdInput.value;
+        if (gameId) {
+          socket.send(JSON.stringify({ type: "join", gameId: gameId }));
+        }
+      });
+
+      document
+        .getElementById("upButton")
+        .addEventListener("click", () => sendMove("up"));
+      document
+        .getElementById("downButton")
+        .addEventListener("click", () => sendMove("down"));
+      document
+        .getElementById("leftButton")
+        .addEventListener("click", () => sendMove("left"));
+      document
+        .getElementById("rightButton")
+        .addEventListener("click", () => sendMove("right"));
+      document
+        .getElementById("bombButton")
+        .addEventListener("click", () => sendMove("bomb"));
+
+      document.addEventListener("keydown", (event) => {
+        let direction;
+        switch (event.key) {
+          case "ArrowUp":
+          case "w":
+          case "W":
+            direction = "up";
+            break;
+          case "ArrowDown":
+          case "s":
+          case "S":
+            direction = "down";
+            break;
+          case "ArrowLeft":
+          case "a":
+          case "A":
+            direction = "left";
+            break;
+          case "ArrowRight":
+          case "d":
+          case "D":
+            direction = "right";
+            break;
+          case " ":
+            direction = "bomb";
+            break;
+        }
+        if (direction) {
+          sendMove(direction);
+        }
+      });
+
+      socket.onopen = () => {
+        console.log("Forbundet til serveren");
+        statusElement.textContent = "Status: Forbundet";
+      };
+
+      socket.onclose = () => {
+        console.log("Forbindelse til server lukket");
+        statusElement.textContent = "Status: Afbrudt";
+      };
+
+      socket.onerror = (error) => {
+        console.error("WebSocket fejl:", error);
+        statusElement.textContent = "Status: Fejl i forbindelse";
+      };
+
+      socket.onmessage = (event) => {
+        console.log("Besked modtaget fra server:", event.data);
+        // Her kan du tilføje logik til at håndtere beskeder fra serveren
+      };
+    </script>
+  </body>
+</html>
